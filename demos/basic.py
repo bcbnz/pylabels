@@ -47,3 +47,4 @@ sheet.add_label("Oversized label here")
 
 # Save the file and we are done.
 sheet.save()
+print("{0:d} label(s) output on {1:d} page(s).".format(sheet.labels, sheet.pages))

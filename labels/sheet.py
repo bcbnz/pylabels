@@ -42,6 +42,10 @@ class Sheet(object):
         self.drawing_callable = drawing_callable
         self.border = border
 
+        # Initialise page and label counters.
+        self.labels = 0
+        self.pages = 0
+
         # Set up some internal variables.
         self.__canvas = None
         self.__position = [1, 1]
@@ -60,6 +64,11 @@ class Sheet(object):
         # If this is the first label, create the canvas.
         if not self.__canvas:
             self.__start_file()
+
+        # Update the counters.
+        self.labels += 1
+        if self.__position == [1, 1]:
+            self.pages += 1
 
         # Calculate the bottom edge of the next label.
         bottom = self.specs['sheet_height'] - self.specs['top_margin']
