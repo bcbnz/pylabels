@@ -18,8 +18,9 @@ import labels.sheet_specifications
 import labels.sheet
 
 # Create an A4 portrait (210mm x 297mm) sheets with 2 columns and 8 rows of
-# labels. Each label is 90mm x 25mm. The margins are automatically calculated.
-specs = labels.sheet_specifications.create(210, 297, 2, 8, 90, 25)
+# labels. Each label is 90mm x 25mm with a 2mm rounded corner. The margins are
+# automatically calculated.
+specs = labels.sheet_specifications.create(210, 297, 2, 8, 90, 25, corner_radius=2)
 
 # Create a function to draw each label. This will be given the ReportLab canvas
 # to draw on, the position and dimensions (NB. these will be in points, the

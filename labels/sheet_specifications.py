@@ -45,6 +45,10 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
     equally amongst them. If all the width or all the height margins are given,
     they must exactly use up any space.
 
+    The following additional dimensions can be specified:
+
+    corner_radius: gives the label rounded corners with the given radius.
+
     If any given dimension is invalid (i.e., it means the labels cannot fit on
     the sheet) then an InvalidDimension exception will be raised with the
     dimension that caused the problem.
@@ -139,6 +143,19 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
         spec['top_margin'] = spec.get('top_margin', autoh)
         spec['row_gap'] = spec.get('row_gap', autoh)
         spec['bottom_margin'] = spec.get('bottom_margin', autoh)
+
+    # Check additional properties.
+    if 'corner_radius' in kwargs:
+        corner_radius = float(kwargs['corner_radius'])
+        if corner_radius < 0:
+            raise InvalidDimension("Corner radius cannot be less than zero.")
+        if corner_radius > (spec["label_width"] / 2):
+            raise InvalidDimension("Corner radius cannot be more than half the label width.")
+        if corner_radius > (spec["label_height"] / 2):
+            raise InvalidDimension("Corner radius cannot be more than half the label height.")
+        spec['corner_radius'] = corner_radius
+    else:
+        spec['corner_radius'] = None
 
     # Done.
     return spec

@@ -52,6 +52,7 @@ class Sheet(object):
         self.__pagesize = [specs['num_rows'], specs['num_columns']]
         self.__lw = specs['label_width'] * mm
         self.__lh = specs['label_height'] * mm
+        self.__cr = (specs['corner_radius'] or 0) * mm
         self.__used = {}
 
     def partial_page(self, page, used_labels):
@@ -141,15 +142,29 @@ class Sheet(object):
         left += (self.specs['column_gap'] * (self.__position[1] - 1))
         left *= mm
 
+        # Generate a path corresponding to the border of the label.
+        border = self.__canvas.beginPath()
+        if self.__cr:
+            # Have rounded corners, calculate the appropriate arcs.
+            cr = self.__cr
+            h = self.__lh
+            w = self.__lw
+            border.moveTo(left+cr, bottom)
+            border.arcTo(left + w, bottom, left + w - 2*cr, bottom + 2*cr, 270, 90)
+            border.arcTo(left + w, bottom + h - 2*cr, left + w - 2*cr, bottom + h, 0, 90)
+            border.arcTo(left, bottom + h - 2*cr, left + 2*cr, bottom + h, 90, 90)
+            border.arcTo(left + 2*cr, bottom, left, bottom + 2*cr, 180, 90)
+        else:
+            # No rounded corners, use a rectangle.
+            border.rect(left, bottom, self.__lw, self.__lh)
+
         # Save the state of the canvas to protect against changes made by the
         # drawing function.
         self.__canvas.saveState()
 
-        # Create a clipping path to prevent the drawing of this label covering
-        # other drawings.
-        clip = self.__canvas.beginPath()
-        clip.rect(left, bottom, self.__lw, self.__lh)
-        self.__canvas.clipPath(clip, stroke=0)
+        # Use the border as a clipping path to prevent the drawing of this label
+        # covering other drawings.
+        self.__canvas.clipPath(border, stroke=0)
 
         # Call the drawing function.
         self.drawing_callable(self.__canvas, left, bottom, self.__lw, self.__lh, obj)
@@ -159,7 +174,7 @@ class Sheet(object):
 
         # Draw the border if requested.
         if self.border:
-            self.__canvas.rect(left, bottom, self.__lw, self.__lh)
+            self.__canvas.drawPath(border)
 
     def add_labels(self, obj_iterable):
         """Add multiple labels. Each item in the given iterable will be passed
