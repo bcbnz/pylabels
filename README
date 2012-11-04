@@ -1,0 +1,6 @@
+========
+pylabels
+========
+
+Python library for creating PDFs to print mailing labels. Uses the
+ReportLab PDF toolkit.
