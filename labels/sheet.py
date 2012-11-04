@@ -48,13 +48,74 @@ class Sheet(object):
 
         # Set up some internal variables.
         self.__canvas = None
-        self.__position = [1, 1]
+        self.__position = [1, 0]
+        self.__pagesize = [specs['num_rows'], specs['num_columns']]
         self.__lw = specs['label_width'] * mm
         self.__lh = specs['label_height'] * mm
+        self.__used = {}
+
+    def partial_page(self, page, used_labels):
+        """Allows a page to be marked as already partially used so you can
+        generate a PDF to print on the remaining labels.
+
+        :param page: The page number to mark as partially used. The page must
+                     not have already been started, i.e., for page 1 this must
+                     be called before any labels have been started, for page 2
+                     this must be called before the first page is full and so
+                     on.
+        :param used_labels: An iterable of (row, column) pairs marking which
+                            labels have been used already. The rows and columns
+                            must be within the bounds of the sheet.
+
+        """
+        # Check the page number is valid.
+        if page <= self.pages:
+            raise ValueError("Page {0:d} has already started, cannot mark used labels now.".format(page))
+
+        # Add these to any existing labels marked as used.
+        used = self.__used.get(page, set())
+        for row, column in used_labels:
+            # Check the index is valid.
+            if row < 1 or row > self.specs['num_rows']:
+                raise IndexError("Invalid row number: {0:d}.".format(row))
+            if column < 1 or column > self.specs['num_columns']:
+                raise IndexError("Invalid column number: {0:d}.".format(column))
+
+            # Add it.
+            used.add((int(row), int(column)))
+
+        # Save the details.
+        self.__used[page] = used
 
     def __start_file(self):
         pagesize=(self.specs['sheet_width']*mm, self.specs['sheet_height']*mm)
         self.__canvas = Canvas(self.filename, pagesize=pagesize)
+
+    def __next_label(self):
+        # Special case for the very first label.
+        if self.pages == 0:
+            self.pages = 1
+
+        # Filled up a page.
+        if self.__position == self.__pagesize:
+            self.__canvas.showPage()
+            self.__position = [1, 0]
+            self.pages += 1
+
+        # Filled up a row.
+        elif self.__position[1] == self.specs['num_columns']:
+            self.__position[0] += 1
+            self.__position[1] = 0
+
+        # Move to the next column.
+        self.__position[1] += 1
+
+    def __next_unused_label(self):
+        self.__next_label()
+        if self.pages in self.__used:
+            while tuple(self.__position) in self.__used[self.pages]:
+                self.__next_label()
+        self.labels += 1
 
     def add_label(self, obj):
         """Add a label to the sheet. The argument is the object to draw which
@@ -65,12 +126,10 @@ class Sheet(object):
         if not self.__canvas:
             self.__start_file()
 
-        # Update the counters.
-        self.labels += 1
-        if self.__position == [1, 1]:
-            self.pages += 1
+        # Find the next available label.
+        self.__next_unused_label()
 
-        # Calculate the bottom edge of the next label.
+        # Calculate the bottom edge of the label.
         bottom = self.specs['sheet_height'] - self.specs['top_margin']
         bottom -= (self.specs['label_height'] * self.__position[0])
         bottom -= (self.specs['row_gap'] * (self.__position[0] - 1))
@@ -101,21 +160,6 @@ class Sheet(object):
         # Draw the border if requested.
         if self.border:
             self.__canvas.rect(left, bottom, self.__lw, self.__lh)
-
-        # Move to the next column.
-        self.__position[1] += 1
-
-        # Filled up a row.
-        if self.__position[1] > self.specs['num_columns']:
-            # Next row, first column.
-            self.__position[0] += 1
-            self.__position[1] = 1
-
-            # Filled up a page.
-            if self.__position[0] > self.specs['num_rows']:
-                # Move to the next page, first row.
-                self.__canvas.showPage()
-                self.__position[0] = 1
 
     def add_labels(self, obj_iterable):
         """Add multiple labels. Each item in the given iterable will be passed
