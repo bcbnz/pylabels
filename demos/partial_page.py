@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU General Public License along with
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
 
-import labels.sheet_specifications
-import labels.sheet
+import labels
 
 # Create an A4 portrait (210mm x 297mm) sheets with 2 columns and 8 rows of
 # labels. Each label is 90mm x 25mm with a 2mm rounded corner. The margins are
