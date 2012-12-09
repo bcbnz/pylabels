@@ -28,11 +28,12 @@ class Sheet(object):
         :param specs: Sheet specification dictionary from the
                       sheet_specifications.create() function.
         :param drawing_callable: The function to call to draw an individual
-                                 label. This will get 5 parameters: the left and
-                                 bottom positions of the label, its width and
-                                 height, and the object to draw. The position
-                                 and dimensions will be in points, the unit of
-                                 choice for ReportLab.
+                                 label. This will get 6 parameters: the
+                                 ReportLab canvas object to draw on, the left
+                                 and bottom positions of the label, its width
+                                 and height, and the object to draw. The
+                                 position and dimensions will be in points, the
+                                 unit of choice for ReportLab.
         :param border: Draw a border around each label.
 
         """
