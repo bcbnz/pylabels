@@ -9,11 +9,13 @@ Basically, the user creates a set of specifications of the label sizes etc,
 writes a callback function which does the actual drawing, and gives these two
 items to a Sheet object along with an output filename. Items are then added to
 the sheet using the add_label() method (or add_labels() to add all items from
-an iterable). The callback function is called once for each item, being given
-the position and size of the label in addition to the item itself. Any of the
-standard ReportLab drawing methods can be used, with pylabels automatically
-adding a clipping path around each label to prevent it interfering with other
-labels.
+an iterable).
+
+The callback function is called once for each item, being given a ReportLab
+Drawing object representing the label, its width and height, and the item to
+draw on the label. Any of the standard ReportLab drawing methods can be used,
+with pylabels automatically adding a clipping path around each label to prevent
+it interfering with other labels.
 
 Examples
 ========

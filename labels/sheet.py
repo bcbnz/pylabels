@@ -15,7 +15,10 @@
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
 
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.lib import colors
 from reportlab.lib.units import mm
+from reportlab.graphics import renderPDF
+from reportlab.graphics.shapes import Drawing, ArcPath
 
 class Sheet(object):
     """Create one or more sheets of labels.
@@ -34,7 +37,7 @@ class Sheet(object):
                                  and height, and the object to draw. The
                                  position and dimensions will be in points, the
                                  unit of choice for ReportLab.
-        :param border: Draw a border around each label.
+        :param border: Whether or not to draw a border around each label.
 
         """
         # Save our arguments.
@@ -48,13 +51,59 @@ class Sheet(object):
         self.pages = 0
 
         # Set up some internal variables.
-        self.__canvas = None
-        self.__position = [1, 0]
-        self.__pagesize = [specs['num_rows'], specs['num_columns']]
-        self.__lw = specs['label_width'] * mm
-        self.__lh = specs['label_height'] * mm
-        self.__cr = (specs['corner_radius'] or 0) * mm
-        self.__used = {}
+        self._canvas = None
+        self._position = [1, 0]
+        self._pagesize = [specs['num_rows'], specs['num_columns']]
+        self._lw = specs['label_width'] * mm
+        self._lh = specs['label_height'] * mm
+        self._cr = (specs['corner_radius'] or 0) * mm
+        self._used = {}
+
+        # Create the border.
+        self._init_border()
+
+    def _init_border(self):
+        # Have to create the border from a path so we can use it as a clip path.
+        border = ArcPath()
+
+        # Copy some properties to a local scope.
+        h, w, cr = self._lh, self._lw, self._cr
+
+        # If the border has rounded corners.
+        if self._cr:
+            border.moveTo(w - cr, 0)
+            border.addArc(w - cr, cr, cr, -90, 0)
+            border.lineTo(w, h - cr)
+            border.addArc(w - cr, h - cr, cr, 0, 90)
+            border.lineTo(cr, h)
+            border.addArc(cr, h - cr, cr, 90, 180)
+            border.lineTo(0, cr)
+            border.addArc(cr, cr, cr, 180, 270)
+            border.closePath()
+
+        # No rounded corners.
+        else:
+            border.moveTo(0, 0)
+            border.lineTo(w, 0)
+            border.lineTo(w, h)
+            border.lineTo(0, h)
+            border.closePath()
+
+        # Use it as a clip path.
+        border.isClipPath = 1
+
+        # Show the border?
+        if self.border:
+            border.strokeWidth = 1
+            border.strokeColor = colors.black
+        else:
+            border.strokeColor = None
+
+        # Never fill it.
+        border.fillColor = None
+
+        # And done.
+        self._border = border
 
     def partial_page(self, page, used_labels):
         """Allows a page to be marked as already partially used so you can
@@ -75,7 +124,7 @@ class Sheet(object):
             raise ValueError("Page {0:d} has already started, cannot mark used labels now.".format(page))
 
         # Add these to any existing labels marked as used.
-        used = self.__used.get(page, set())
+        used = self._used.get(page, set())
         for row, column in used_labels:
             # Check the index is valid.
             if row < 1 or row > self.specs['num_rows']:
@@ -87,36 +136,36 @@ class Sheet(object):
             used.add((int(row), int(column)))
 
         # Save the details.
-        self.__used[page] = used
+        self._used[page] = used
 
-    def __start_file(self):
+    def _start_file(self):
         pagesize=(self.specs['sheet_width']*mm, self.specs['sheet_height']*mm)
-        self.__canvas = Canvas(self.filename, pagesize=pagesize)
+        self._canvas = Canvas(self.filename, pagesize=pagesize)
 
-    def __next_label(self):
+    def _next_label(self):
         # Special case for the very first label.
         if self.pages == 0:
             self.pages = 1
 
         # Filled up a page.
-        if self.__position == self.__pagesize:
-            self.__canvas.showPage()
-            self.__position = [1, 0]
+        if self._position == self._pagesize:
+            self._canvas.showPage()
+            self._position = [1, 0]
             self.pages += 1
 
         # Filled up a row.
-        elif self.__position[1] == self.specs['num_columns']:
-            self.__position[0] += 1
-            self.__position[1] = 0
+        elif self._position[1] == self.specs['num_columns']:
+            self._position[0] += 1
+            self._position[1] = 0
 
         # Move to the next column.
-        self.__position[1] += 1
+        self._position[1] += 1
 
-    def __next_unused_label(self):
-        self.__next_label()
-        if self.pages in self.__used:
-            while tuple(self.__position) in self.__used[self.pages]:
-                self.__next_label()
+    def _next_unused_label(self):
+        self._next_label()
+        if self.pages in self._used:
+            while tuple(self._position) in self._used[self.pages]:
+                self._next_label()
         self.labels += 1
 
     def add_label(self, obj):
@@ -125,57 +174,33 @@ class Sheet(object):
 
         """
         # If this is the first label, create the canvas.
-        if not self.__canvas:
-            self.__start_file()
+        if not self._canvas:
+            self._start_file()
 
         # Find the next available label.
-        self.__next_unused_label()
+        self._next_unused_label()
 
         # Calculate the bottom edge of the label.
         bottom = self.specs['sheet_height'] - self.specs['top_margin']
-        bottom -= (self.specs['label_height'] * self.__position[0])
-        bottom -= (self.specs['row_gap'] * (self.__position[0] - 1))
+        bottom -= (self.specs['label_height'] * self._position[0])
+        bottom -= (self.specs['row_gap'] * (self._position[0] - 1))
         bottom *= mm
 
         # And the left edge.
         left = self.specs['left_margin']
-        left += (self.specs['label_width'] * (self.__position[1] - 1))
-        left += (self.specs['column_gap'] * (self.__position[1] - 1))
+        left += (self.specs['label_width'] * (self._position[1] - 1))
+        left += (self.specs['column_gap'] * (self._position[1] - 1))
         left *= mm
 
-        # Generate a path corresponding to the border of the label.
-        border = self.__canvas.beginPath()
-        if self.__cr:
-            # Have rounded corners, calculate the appropriate arcs.
-            cr = self.__cr
-            h = self.__lh
-            w = self.__lw
-            border.moveTo(left+cr, bottom)
-            border.arcTo(left + w, bottom, left + w - 2*cr, bottom + 2*cr, 270, 90)
-            border.arcTo(left + w, bottom + h - 2*cr, left + w - 2*cr, bottom + h, 0, 90)
-            border.arcTo(left, bottom + h - 2*cr, left + 2*cr, bottom + h, 90, 90)
-            border.arcTo(left + 2*cr, bottom, left, bottom + 2*cr, 180, 90)
-        else:
-            # No rounded corners, use a rectangle.
-            border.rect(left, bottom, self.__lw, self.__lh)
-
-        # Save the state of the canvas to protect against changes made by the
-        # drawing function.
-        self.__canvas.saveState()
-
-        # Use the border as a clipping path to prevent the drawing of this label
-        # covering other drawings.
-        self.__canvas.clipPath(border, stroke=0)
+        # Create a drawing object for this label and add the border.
+        label = Drawing(self._lw, self._lh)
+        label.add(self._border)
 
         # Call the drawing function.
-        self.drawing_callable(self.__canvas, left, bottom, self.__lw, self.__lh, obj)
+        self.drawing_callable(label, self._lw, self._lh, obj)
 
-        # Restore the state.
-        self.__canvas.restoreState()
-
-        # Draw the border if requested.
-        if self.border:
-            self.__canvas.drawPath(border)
+        # Render the label on the sheet.
+        renderPDF.draw(label, self._canvas, left, bottom)
 
     def add_labels(self, obj_iterable):
         """Add multiple labels. Each item in the given iterable will be passed
@@ -190,6 +215,6 @@ class Sheet(object):
         file. Calling this has the side-affect of starting a new page.
 
         """
-        if self.__canvas:
-            self.__canvas.save()
-            self.__position = [1, 1]
+        if self._canvas:
+            self._canvas.save()
+            self._position = [1, 1]
