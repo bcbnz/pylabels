@@ -26,7 +26,7 @@ random.seed(187459)
 # Create an A4 portrait (210mm x 297mm) sheets with 2 columns and 8 rows of
 # labels. Each label is 90mm x 25mm with a 2mm rounded corner. The margins are
 # automatically calculated.
-specs = labels.sheet_specifications.create(210, 297, 2, 8, 90, 25, corner_radius=2)
+specs = labels.create_specs(210, 297, 2, 8, 90, 25, corner_radius=2)
 
 # Get the path to the demos directory.
 base_path = os.path.dirname(__file__)
@@ -61,7 +61,7 @@ def write_name(label, width, height, name):
 # Create the sheet. As we only intend to preview pages 1 and 3, there is no
 # point in actually calling the drawing function for other pages. We can tell
 # the constructor this and save some overhead.
-sheet = labels.sheet.Sheet(specs, write_name, border=True, pages_to_draw=[1,3])
+sheet = labels.Sheet(specs, write_name, border=True, pages_to_draw=[1,3])
 sheet.partial_page(1, ((1, 1), (2, 2), (4, 2)))
 
 # Use an external file as the data source. NB. we need to remove the newline
@@ -70,8 +70,8 @@ with open(os.path.join(base_path, "names.txt")) as names:
     sheet.add_labels(name.strip() for name in names)
 
 # Save the previews.
-sheet.preview(1, 'nametag_page1.png')
-sheet.preview(3, 'nametag_page3.jpg', format='jpg')
+sheet.preview(1, 'nametags_page1.png')
+sheet.preview(3, 'nametags_page3.jpg', format='jpg')
 
 # Note that we can still save a PDF from here, but only pages 1 and 3 will have
 # content since we told the constructor those were all we wanted.

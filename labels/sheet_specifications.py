@@ -20,8 +20,8 @@ class InvalidDimension(ValueError):
     """Raised when a sheet specification has inconsistent dimensions. """
     pass
 
-def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
-           label_height, **kwargs):
+def create_specs(sheet_width, sheet_height, num_columns, num_rows, label_width,
+                 label_height, **kwargs):
     """Create a set of specifications for a single sheet. All dimensions are
     given in millimetres.
 

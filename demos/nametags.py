@@ -26,7 +26,7 @@ random.seed(187459)
 # Create an A4 portrait (210mm x 297mm) sheets with 2 columns and 8 rows of
 # labels. Each label is 90mm x 25mm with a 2mm rounded corner. The margins are
 # automatically calculated.
-specs = labels.sheet_specifications.create(210, 297, 2, 8, 90, 25, corner_radius=2)
+specs = labels.create_specs(210, 297, 2, 8, 90, 25, corner_radius=2)
 
 # Get the path to the demos directory.
 base_path = os.path.dirname(__file__)
@@ -59,7 +59,7 @@ def write_name(label, width, height, name):
     label.add(s)
 
 # Create the sheet.
-sheet = labels.sheet.Sheet(specs, write_name, border=True)
+sheet = labels.Sheet(specs, write_name, border=True)
 sheet.partial_page(1, ((1, 1), (2, 2), (4, 2)))
 
 # Use an external file as the data source. NB. we need to remove the newline

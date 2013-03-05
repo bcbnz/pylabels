@@ -15,4 +15,5 @@
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
 
 import sheet_specifications
-import sheet
+from sheet import Sheet
+from sheet_specifications import InvalidDimension, create_specs
