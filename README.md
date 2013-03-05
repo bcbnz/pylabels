@@ -3,7 +3,7 @@ pylabels
 ========
 
 pylabels is a Python library for creating PDFs to print sheets of labels. It
-uses the ReportLab PDF toolkit to produce the PDF.
+uses the [ReportLab PDF toolkit][1] to produce the PDF.
 
 Basically, the user creates a set of specifications of the label sizes etc,
 writes a callback function which does the actual drawing, and gives these two
@@ -19,18 +19,21 @@ it interfering with other labels.
 Once all the items have been added, the labels can be saved as a PDF, or a
 preview of a page can be saved as an image.
 
+[1]: http://www.reportlab.com/software/opensource/
+
 Examples
 ========
 
 The following examples are available in the demos directory:
 
-* basic.py - a introduction to the basic use of pylabels.
-* partial_page.py - how to produce partial pages (i.e., pages with some of the
-                    labels previously used).
-* nametags.py - creates a set of nametags from the list of names in the
-                names.txt file. Includes the use of two custom fonts, font size
-                selection, and centred text.
-* preview.py - generates image previews of two of the pages from the nametags.py demo.
+* [Basic](demos/basic.py) - a introduction to the basic use of pylabels.
+* [Partial pages](demos/partial_page.py) - how to produce partial pages (i.e.,
+  pages with some of the labels previously used).
+* [Nametags](demos/nametags.py) - creates a set of nametags from the list of
+  names in the names.txt file. Includes the use of two custom fonts, font size
+  selection, and centred text.
+* [Image preview](demos/preview.py) - generates image previews of two of the
+  pages from the nametags demo.
 
 Demo fonts
 ==========
