@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012 Blair Bonnett
+# Copyright (C) 2012, 2013 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU General Public License along with
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
+
+from decimal import Decimal
 
 class InvalidDimension(ValueError):
     """Raised when a sheet specification has inconsistent dimensions. """
@@ -56,12 +58,12 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
     """
     # Pull out the basic details.
     spec = {
-        'sheet_width': float(sheet_width),
-        'sheet_height': float(sheet_height),
+        'sheet_width': Decimal(sheet_width),
+        'sheet_height': Decimal(sheet_height),
         'num_columns': int(num_columns),
         'num_rows': int(num_rows),
-        'label_width': float(label_width),
-        'label_height': float(label_height),
+        'label_width': Decimal(label_width),
+        'label_height': Decimal(label_height),
     }
 
     # Check the values are positive.
@@ -88,19 +90,19 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
 
     # Check any given margins for the width.
     if 'left_margin' in kwargs:
-        spec['left_margin'] = float(kwargs['left_margin'])
+        spec['left_margin'] = Decimal(kwargs['left_margin'])
         wspace -= spec['left_margin']
         if wspace < 0:
             raise InvalidDimension("Left margin is too wide.")
         wdiv -= 1
     if 'column_gap' in kwargs:
-        spec['column_gap'] = float(kwargs['column_gap'])
+        spec['column_gap'] = Decimal(kwargs['column_gap'])
         wspace -= (spec['column_gap'] * (spec['num_columns'] - 1))
         if wspace < 0:
             raise InvalidDimension("Column gap is too wide.")
         wdiv -= (spec['num_columns'] - 1)
     if 'right_margin' in kwargs:
-        spec['right_margin'] = float(kwargs['right_margin'])
+        spec['right_margin'] = Decimal(kwargs['right_margin'])
         wspace -= spec['right_margin']
         if wspace < 0:
             raise InvalidDimension("Right margin is too wide.")
@@ -108,19 +110,19 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
 
     # And again for the height.
     if 'top_margin' in kwargs:
-        spec['top_margin'] = float(kwargs['top_margin'])
+        spec['top_margin'] = Decimal(kwargs['top_margin'])
         hspace -= spec['top_margin']
         if hspace < 0:
             raise InvalidDimension("Top margin is too tall.")
         hdiv -= 1
     if 'row_gap' in kwargs:
-        spec['row_gap'] = float(kwargs['row_gap'])
+        spec['row_gap'] = Decimal(kwargs['row_gap'])
         hspace -= (spec['row_gap'] * (spec['num_rows'] - 1))
         if hspace < 0:
             raise InvalidDimension("Row gap is too tall.")
         hdiv -= (spec['num_rows'] - 1)
     if 'bottom_margin' in kwargs:
-        spec['bottom_margin'] = float(kwargs['bottom_margin'])
+        spec['bottom_margin'] = Decimal(kwargs['bottom_margin'])
         hspace -= spec['bottom_margin']
         if hspace < 0:
             raise InvalidDimension("Bottom margin is too tall.")
@@ -146,7 +148,7 @@ def create(sheet_width, sheet_height, num_columns, num_rows, label_width,
 
     # Check additional properties.
     if 'corner_radius' in kwargs:
-        corner_radius = float(kwargs['corner_radius'])
+        corner_radius = Decimal(kwargs['corner_radius'])
         if corner_radius < 0:
             raise InvalidDimension("Corner radius cannot be less than zero.")
         if corner_radius > (spec["label_width"] / 2):

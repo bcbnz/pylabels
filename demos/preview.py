@@ -58,8 +58,10 @@ def write_name(label, width, height, name):
     s.fillColor = random.choice((colors.black, colors.blue, colors.red, colors.green))
     label.add(s)
 
-# Create the sheet.
-sheet = labels.sheet.Sheet(specs, write_name, border=True)
+# Create the sheet. As we only intend to preview pages 1 and 3, there is no
+# point in actually calling the drawing function for other pages. We can tell
+# the constructor this and save some overhead.
+sheet = labels.sheet.Sheet(specs, write_name, border=True, pages_to_draw=[1,3])
 sheet.partial_page(1, ((1, 1), (2, 2), (4, 2)))
 
 # Use an external file as the data source. NB. we need to remove the newline
@@ -67,6 +69,20 @@ sheet.partial_page(1, ((1, 1), (2, 2), (4, 2)))
 with open(os.path.join(base_path, "names.txt")) as names:
     sheet.add_labels(name.strip() for name in names)
 
-# Save the file and we are done.
-sheet.save('nametags.pdf')
+# Save the previews.
+sheet.preview(1, 'nametag_page1.png')
+sheet.preview(3, 'nametag_page3.jpg', format='jpg')
+
+# Note that we can still save a PDF from here, but only pages 1 and 3 will have
+# content since we told the constructor those were all we wanted.
+sheet.save('nametags_from_preview.pdf')
+
+# Note that if you compare the previews here and the full PDF from the
+# nametags.py demo, the colours on page three are different. This is because the
+# drawing function is not called for page two, and hence the random generator is
+# not advanced. In general, your labels should be independent of position etc.,
+# but if not, be aware of the side-affect.
+
+# The label and page count will be the same as for a full run (i.e., the undrawn
+# labels are still counted).
 print("{0:d} label(s) output on {1:d} page(s).".format(sheet.label_count, sheet.page_count))

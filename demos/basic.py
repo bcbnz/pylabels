@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012 Blair Bonnett
+# Copyright (C) 2012, 2013 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -31,7 +31,7 @@ def draw_label(label, width, height, obj):
     label.add(shapes.String(2, 2, str(obj), fontName="Helvetica", fontSize=40))
 
 # Create the sheet.
-sheet = labels.sheet.Sheet('basic.pdf', specs, draw_label, border=True)
+sheet = labels.sheet.Sheet(specs, draw_label, border=True)
 
 # Add a couple of labels.
 sheet.add_label("Hello")
@@ -45,5 +45,5 @@ sheet.add_labels(range(3, 22))
 sheet.add_label("Oversized label here")
 
 # Save the file and we are done.
-sheet.save()
-print("{0:d} label(s) output on {1:d} page(s).".format(sheet.labels, sheet.pages))
+sheet.save('basic.pdf')
+print("{0:d} label(s) output on {1:d} page(s).".format(sheet.label_count, sheet.page_count))

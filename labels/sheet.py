@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012 Blair Bonnett
+# Copyright (C) 2012, 2013 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -18,16 +18,19 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.graphics import renderPDF
+from reportlab.graphics import renderPM
 from reportlab.graphics.shapes import Drawing, ArcPath
+
+from decimal import Decimal
+mm = Decimal(mm)
 
 class Sheet(object):
     """Create one or more sheets of labels.
+
     """
 
-    def __init__(self, filename, specs, drawing_callable, border=False):
+    def __init__(self, specs, drawing_callable, pages_to_draw=None, border=False):
         """
-        :param filename: Name of the PDF file to save the labels as. Any
-                         existing content will be overwritten.
         :param specs: Sheet specification dictionary from the
                       sheet_specifications.create() function.
         :param drawing_callable: The function to call to draw an individual
@@ -36,37 +39,48 @@ class Sheet(object):
                                  and height, and the object to draw. The
                                  dimensions will be in points, the unit of
                                  choice for ReportLab.
+        :param pages_to_draw: A list of pages to actually draw labels on. This
+                              is intended to be used with the :method:`preview`
+                              to avoid drawing labels that will never be
+                              displayed. A value of ``None`` (the default) means
+                              draw all pages.
         :param border: Whether or not to draw a border around each label.
+
+        Note that if you specify a ``pages_to_draw`` list, pages not in that
+        list will be blank since the drawing function will not be called on that
+        page. This could have a side-affect if you rely on the drawing function
+        modifying some global values. For example, in the nametags.py and preview.py demo
+        scripts, the colours for each label are picked by a pseduo-random number
+        generator. However, in the preview script, this generator is not
+        advanced and so the colours on the last page are different.
 
         """
         # Save our arguments.
-        self.filename = filename
         self.specs = specs
         self.drawing_callable = drawing_callable
+        self.pages_to_draw = pages_to_draw
         self.border = border
 
-        # Initialise page and label counters.
-        self.labels = 0
-        self.pages = 0
-
         # Set up some internal variables.
-        self._canvas = None
-        self._position = [1, 0]
-        self._pagesize = [specs['num_rows'], specs['num_columns']]
         self._lw = specs['label_width'] * mm
         self._lh = specs['label_height'] * mm
         self._cr = (specs['corner_radius'] or 0) * mm
         self._used = {}
+        self._pages = []
+        self._current_page = None
 
-        # Create the border.
-        self._init_border()
+        # Page information.
+        self._pagesize = (float(self.specs['sheet_width']*mm), float(self.specs['sheet_height']*mm))
+        self._numlabels = [self.specs['num_rows'], self.specs['num_columns']]
+        self._position = [1, 0]
+        self.label_count = 0
+        self.page_count = 0
 
-    def _init_border(self):
         # Have to create the border from a path so we can use it as a clip path.
         border = ArcPath()
 
         # Copy some properties to a local scope.
-        h, w, cr = self._lh, self._lw, self._cr
+        h, w, cr = float(self._lh), float(self._lw), float(self._cr)
 
         # If the border has rounded corners.
         if self._cr:
@@ -90,19 +104,23 @@ class Sheet(object):
 
         # Use it as a clip path.
         border.isClipPath = 1
-
-        # Show the border?
-        if self.border:
-            border.strokeWidth = 1
-            border.strokeColor = colors.black
-        else:
-            border.strokeColor = None
-
-        # Never fill it.
+        border.strokeColor = None
         border.fillColor = None
 
         # And done.
         self._border = border
+
+        # The border doesn't show up if its part of a clipping path when
+        # outputting to an image. If its needed, make a copy and turn the
+        # clipping path off.
+        if self.border:
+            from copy import copy
+            self._border_visible = copy(self._border)
+            self._border_visible.isClipPath = 0
+            self._border_visible.strokeWidth = 1
+            self._border_visible.strokeColor = colors.black
+        else:
+            self._border_visible = None
 
     def partial_page(self, page, used_labels):
         """Allows a page to be marked as already partially used so you can
@@ -119,7 +137,7 @@ class Sheet(object):
 
         """
         # Check the page number is valid.
-        if page <= self.pages:
+        if page <= self.page_count:
             raise ValueError("Page {0:d} has already started, cannot mark used labels now.".format(page))
 
         # Add these to any existing labels marked as used.
@@ -137,20 +155,20 @@ class Sheet(object):
         # Save the details.
         self._used[page] = used
 
-    def _start_file(self):
-        pagesize=(self.specs['sheet_width']*mm, self.specs['sheet_height']*mm)
-        self._canvas = Canvas(self.filename, pagesize=pagesize)
+    def _new_page(self):
+        self._current_page = Drawing(*self._pagesize)
+        self._pages.append(self._current_page)
+        self.page_count += 1
+        self._position = [1, 0]
 
     def _next_label(self):
         # Special case for the very first label.
-        if self.pages == 0:
-            self.pages = 1
+        if self.page_count == 0:
+            self._new_page()
 
         # Filled up a page.
-        if self._position == self._pagesize:
-            self._canvas.showPage()
-            self._position = [1, 0]
-            self.pages += 1
+        elif self._position == self._numlabels:
+            self._new_page()
 
         # Filled up a row.
         elif self._position[1] == self.specs['num_columns']:
@@ -162,22 +180,31 @@ class Sheet(object):
 
     def _next_unused_label(self):
         self._next_label()
-        if self.pages in self._used:
-            while tuple(self._position) in self._used[self.pages]:
+        if self.page_count in self._used:
+            while tuple(self._position) in self._used[self.page_count]:
                 self._next_label()
-        self.labels += 1
+        self.label_count += 1
 
     def add_label(self, obj):
-        """Add a label to the sheet. The argument is the object to draw which
-        will be passed to the drawing function.
+        """Add a label to the sheet.
+
+        :param obj: The object to draw on the label. This is passed without
+                    modification or copying to the drawing function.
 
         """
-        # If this is the first label, create the canvas.
-        if not self._canvas:
-            self._start_file()
-
         # Find the next available label.
         self._next_unused_label()
+        if self.pages_to_draw and self.page_count not in self.pages_to_draw:
+            return
+
+        # Create a drawing object for this label and add the border.
+        label = Drawing(float(self._lw), float(self._lh))
+        label.add(self._border)
+        if self._border_visible:
+            label.add(self._border_visible)
+
+        # Call the drawing function.
+        self.drawing_callable(label, float(self._lw), float(self._lh), obj)
 
         # Calculate the bottom edge of the label.
         bottom = self.specs['sheet_height'] - self.specs['top_margin']
@@ -191,29 +218,57 @@ class Sheet(object):
         left += (self.specs['column_gap'] * (self._position[1] - 1))
         left *= mm
 
-        # Create a drawing object for this label and add the border.
-        label = Drawing(self._lw, self._lh)
-        label.add(self._border)
-
-        # Call the drawing function.
-        self.drawing_callable(label, self._lw, self._lh, obj)
-
         # Render the label on the sheet.
-        renderPDF.draw(label, self._canvas, left, bottom)
+        label.shift(float(left), float(bottom))
+        self._current_page.add(label)
 
     def add_labels(self, obj_iterable):
-        """Add multiple labels. Each item in the given iterable will be passed
-        to add_label().
+        """Add multiple labels to the sheet.
+
+        :param obj_iterable: An iterable of the objects to add. Each of these
+                             will be passed to :method:`add_label`. Note that,
+                             if this is a generator, it will be consumed.
 
         """
         for obj in obj_iterable:
             self.add_label(obj)
 
-    def save(self):
-        """Save the file. Until this is called, the output is not written to the
-        file. Calling this has the side-affect of starting a new page.
+    def save(self, filename):
+        """Save the file as a PDF.
+
+        :param filename: The filename to save the labels under. Any existing
+                         contents will be overwritten.
 
         """
-        if self._canvas:
-            self._canvas.save()
-            self._position = [1, 1]
+        canvas = Canvas(filename, pagesize=self._pagesize)
+        for page in self._pages:
+            renderPDF.draw(page, canvas, 0, 0)
+            canvas.showPage()
+        canvas.save()
+
+    def preview(self, page, file_like, format='png', dpi=72, background_color=0xFFFFFF):
+        """Render a preview image of a page.
+
+        :param page: Which page to render.
+        :param file_like: Can be a filename as a string, a Python file object,
+                          or something which behaves like a Python file object.
+                          For example, if you were using the Django web
+                          framework, an HttpResponse object could be
+                          passed to render the preview to the browser (as long
+                          as you remember to set the mimetype of the response).
+                          If you pass a filename, the existing contents will be
+                          overwritten.
+        :param format: The format to render the page as.
+        :param dpi: The dots-per-inch to use when rendering.
+        :param background_color: What color background to use.
+
+        If you are creating this sheet for a preview only, then use the
+        ``pages`` parameter to the constructor to avoid the drawing function
+        being called for all the labels on pages you'll never look at. If you
+        preview a page you did not tell the sheet to draw, you will get a blank
+        image.
+
+        """
+        if page < 1 or page > self.page_count:
+            raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
+        renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_color)
