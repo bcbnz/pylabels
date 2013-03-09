@@ -272,3 +272,23 @@ class Sheet(object):
         if page < 1 or page > self.page_count:
             raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
         renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_color)
+
+    def preview_string(self, page, format='png', dpi=72, background_color=0xFFFFFF):
+        """Render a preview image of a page as a string.
+
+        :param page: Which page to render.
+        :param format: The format to render the page as.
+        :param dpi: The dots-per-inch to use when rendering.
+        :param background_color: What color background to use.
+        :return: A string containing the preview image.
+
+        If you are creating this sheet for a preview only, then use the
+        ``pages`` parameter to the constructor to avoid the drawing function
+        being called for all the labels on pages you'll never look at. If you
+        preview a page you did not tell the sheet to draw, you will get a blank
+        image.
+
+        """
+        if page < 1 or page > self.page_count:
+            raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
+        return renderPM.drawToString(self._pages[page-1], format, dpi, background_color)
