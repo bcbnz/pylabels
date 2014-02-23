@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012, 2013 Blair Bonnett
+# Copyright (C) 2012, 2013, 2014 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -26,7 +26,7 @@ random.seed(187459)
 # Create an A4 portrait (210mm x 297mm) sheets with 2 columns and 8 rows of
 # labels. Each label is 90mm x 25mm with a 2mm rounded corner. The margins are
 # automatically calculated.
-specs = labels.create_specs(210, 297, 2, 8, 90, 25, corner_radius=2)
+specs = labels.Specification(210, 297, 2, 8, 90, 25, corner_radius=2)
 
 # Get the path to the demos directory.
 base_path = os.path.dirname(__file__)

@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012, 2013 Blair Bonnett
+# Copyright (C) 2012, 2013, 2014 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -20,6 +20,7 @@ from reportlab.lib.units import mm
 from reportlab.graphics import renderPDF
 from reportlab.graphics import renderPM
 from reportlab.graphics.shapes import Drawing, ArcPath
+from copy import deepcopy
 
 from decimal import Decimal
 mm = Decimal(mm)
@@ -31,8 +32,7 @@ class Sheet(object):
 
     def __init__(self, specs, drawing_callable, pages_to_draw=None, border=False):
         """
-        :param specs: Sheet specification dictionary from the
-                      sheet_specifications.create() function.
+        :param specs: Sheet specification instance.
         :param drawing_callable: The function to call to draw an individual
                                  label. This will get 4 parameters: a ReportLab
                                  Drawing object to draw the label on, its width
@@ -56,22 +56,23 @@ class Sheet(object):
 
         """
         # Save our arguments.
-        self.specs = specs
+        specs._calculate()
+        self.specs = deepcopy(specs)
         self.drawing_callable = drawing_callable
         self.pages_to_draw = pages_to_draw
         self.border = border
 
         # Set up some internal variables.
-        self._lw = specs['label_width'] * mm
-        self._lh = specs['label_height'] * mm
-        self._cr = (specs['corner_radius'] or 0) * mm
+        self._lw = specs.label_width * mm
+        self._lh = specs.label_height * mm
+        self._cr = specs.corner_radius * mm
         self._used = {}
         self._pages = []
         self._current_page = None
 
         # Page information.
-        self._pagesize = (float(self.specs['sheet_width']*mm), float(self.specs['sheet_height']*mm))
-        self._numlabels = [self.specs['num_rows'], self.specs['num_columns']]
+        self._pagesize = (float(self.specs.sheet_width*mm), float(self.specs.sheet_height*mm))
+        self._numlabels = [self.specs.rows, self.specs.columns]
         self._position = [1, 0]
         self.label_count = 0
         self.page_count = 0
@@ -144,9 +145,9 @@ class Sheet(object):
         used = self._used.get(page, set())
         for row, column in used_labels:
             # Check the index is valid.
-            if row < 1 or row > self.specs['num_rows']:
+            if row < 1 or row > self.specs.rows:
                 raise IndexError("Invalid row number: {0:d}.".format(row))
-            if column < 1 or column > self.specs['num_columns']:
+            if column < 1 or column > self.specs.columns:
                 raise IndexError("Invalid column number: {0:d}.".format(column))
 
             # Add it.
@@ -171,7 +172,7 @@ class Sheet(object):
             self._new_page()
 
         # Filled up a row.
-        elif self._position[1] == self.specs['num_columns']:
+        elif self._position[1] == self.specs.columns:
             self._position[0] += 1
             self._position[1] = 0
 
@@ -207,15 +208,15 @@ class Sheet(object):
         self.drawing_callable(label, float(self._lw), float(self._lh), obj)
 
         # Calculate the bottom edge of the label.
-        bottom = self.specs['sheet_height'] - self.specs['top_margin']
-        bottom -= (self.specs['label_height'] * self._position[0])
-        bottom -= (self.specs['row_gap'] * (self._position[0] - 1))
+        bottom = self.specs.sheet_height - self.specs.top_margin
+        bottom -= (self.specs.label_height * self._position[0])
+        bottom -= (self.specs.row_gap * (self._position[0] - 1))
         bottom *= mm
 
         # And the left edge.
-        left = self.specs['left_margin']
-        left += (self.specs['label_width'] * (self._position[1] - 1))
-        left += (self.specs['column_gap'] * (self._position[1] - 1))
+        left = self.specs.left_margin
+        left += (self.specs.label_width * (self._position[1] - 1))
+        left += (self.specs.column_gap * (self._position[1] - 1))
         left *= mm
 
         # Render the label on the sheet.
