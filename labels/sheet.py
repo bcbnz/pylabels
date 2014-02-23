@@ -15,6 +15,7 @@
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
 
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.graphics import shapes
 from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.graphics import renderPDF
@@ -30,7 +31,7 @@ class Sheet(object):
 
     """
 
-    def __init__(self, specs, drawing_callable, pages_to_draw=None, border=False):
+    def __init__(self, specs, drawing_callable, pages_to_draw=None, border=False, shade_missing=False):
         """
         :param specs: Sheet specification instance.
         :param drawing_callable: The function to call to draw an individual
@@ -45,6 +46,8 @@ class Sheet(object):
                               displayed. A value of ``None`` (the default) means
                               draw all pages.
         :param border: Whether or not to draw a border around each label.
+        :param shade_missing: Shade missing labels (specified through
+                              partial_pages). Intended for use with a preview.
 
         Note that if you specify a ``pages_to_draw`` list, pages not in that
         list will be blank since the drawing function will not be called on that
@@ -61,6 +64,10 @@ class Sheet(object):
         self.drawing_callable = drawing_callable
         self.pages_to_draw = pages_to_draw
         self.border = border
+        if shade_missing == True:
+            self.shade_missing = colors.HexColor(0xBBBBBB)
+        else:
+            self.shade_missing = shade_missing
 
         # Set up some internal variables.
         self._lw = specs.label_width * mm
@@ -182,22 +189,34 @@ class Sheet(object):
     def _next_unused_label(self):
         self._next_label()
         if self.page_count in self._used:
-            while tuple(self._position) in self._used[self.page_count]:
+            missing = self._used.get(self.page_count, set())
+            while tuple(self._position) in missing:
+                missing.discard(tuple(self._position))
+                if self.shade_missing:
+                    self._draw_label(self._missing_label)
                 self._next_label()
+                missing = self._used.get(self.page_count, set())
         self.label_count += 1
 
-    def add_label(self, obj):
-        """Add a label to the sheet.
-
-        :param obj: The object to draw on the label. This is passed without
-                    modification or copying to the drawing function.
-
-        """
-        # Find the next available label.
-        self._next_unused_label()
-        if self.pages_to_draw and self.page_count not in self.pages_to_draw:
+    def _missing_label(self, label, width, height, obj=None):
+        if not self.shade_missing:
             return
 
+        r = shapes.Rect(0, 0, width, height)
+        r.fillColor = self.shade_missing
+        r.strokeColor = None
+        label.add(r)
+
+    def _shade_remaining_missing(self):
+        if not self.shade_missing:
+            return
+
+        missing = self._used.get(self.page_count, set())
+        for position in missing:
+            self._position = position
+            self._draw_label(self._missing_label)
+
+    def _draw_label(self, drawing_callable, obj=None):
         # Create a drawing object for this label and add the border.
         label = Drawing(float(self._lw), float(self._lh))
         label.add(self._border)
@@ -205,7 +224,7 @@ class Sheet(object):
             label.add(self._border_visible)
 
         # Call the drawing function.
-        self.drawing_callable(label, float(self._lw), float(self._lh), obj)
+        drawing_callable(label, float(self._lw), float(self._lh), obj)
 
         # Calculate the bottom edge of the label.
         bottom = self.specs.sheet_height - self.specs.top_margin
@@ -222,6 +241,21 @@ class Sheet(object):
         # Render the label on the sheet.
         label.shift(float(left), float(bottom))
         self._current_page.add(label)
+
+    def add_label(self, obj):
+        """Add a label to the sheet.
+
+        :param obj: The object to draw on the label. This is passed without
+                    modification or copying to the drawing function.
+
+        """
+        # Find the next available label.
+        self._next_unused_label()
+        if self.pages_to_draw and self.page_count not in self.pages_to_draw:
+            return
+
+        # Draw it.
+        self._draw_label(self.drawing_callable, obj)
 
     def add_labels(self, obj_iterable):
         """Add multiple labels to the sheet.
@@ -241,6 +275,7 @@ class Sheet(object):
                          contents will be overwritten.
 
         """
+        self._shade_remaining_missing()
         canvas = Canvas(filename, pagesize=self._pagesize)
         for page in self._pages:
             renderPDF.draw(page, canvas, 0, 0)
@@ -272,6 +307,7 @@ class Sheet(object):
         """
         if page < 1 or page > self.page_count:
             raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
+        self._shade_remaining_missing()
         renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_color)
 
     def preview_string(self, page, format='png', dpi=72, background_color=0xFFFFFF):
@@ -292,4 +328,5 @@ class Sheet(object):
         """
         if page < 1 or page > self.page_count:
             raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
+        self._shade_remaining_missing()
         return renderPM.drawToString(self._pages[page-1], format, dpi, background_color)
