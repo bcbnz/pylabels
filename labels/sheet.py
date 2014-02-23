@@ -31,36 +31,47 @@ class Sheet(object):
 
     """
 
-    def __init__(self, specs, drawing_callable, pages_to_draw=None, border=False, shade_missing=False):
+    def __init__(self, specification, drawing_callable, pages_to_draw=None, border=False, shade_missing=False):
         """
-        :param specs: Sheet specification instance.
-        :param drawing_callable: The function to call to draw an individual
-                                 label. This will get 4 parameters: a ReportLab
-                                 Drawing object to draw the label on, its width
-                                 and height, and the object to draw. The
-                                 dimensions will be in points, the unit of
-                                 choice for ReportLab.
-        :param pages_to_draw: A list of pages to actually draw labels on. This
-                              is intended to be used with the :method:`preview`
-                              to avoid drawing labels that will never be
-                              displayed. A value of ``None`` (the default) means
-                              draw all pages.
-        :param border: Whether or not to draw a border around each label.
-        :param shade_missing: Shade missing labels (specified through
-                              partial_pages). Intended for use with a preview.
+        Parameters
+        ----------
+        specification: labels.Specification instance
+            The sizes etc of the label sheets.
+        drawing_callable: callable
+            A function (or other callable object) to call to draw an individual
+            label. It will be given four parameters specifying the label. In
+            order, these are a `reportlab.graphics.shapes.Drawing` instance to
+            draw the label on, the width of the label, the height of the label,
+            and the object to draw. The dimensions will be in points, the unit
+            of choice for ReportLab.
+        pages_to_draw: list of positive integers, default None
+            The list pages to actually draw labels on. This is intended to be
+            used with the preview methods to avoid drawing labels that will
+            never be displayed. A value of None means draw all pages.
+        border: Boolean, default False
+            Whether or not to draw a border around each label.
+        shade_missing: Boolean or ReportLab colour, default False
+            Whether or not to shade missing labels (those specified through the
+            partial_pages method). False means leave the labels unshaded. If a
+            ReportLab colour is given, the labels will be shaded in that colour.
+            A value of True will result in the missing labels being shaded in
+            the hex colour 0xBBBBBB (a medium-light grey).
 
-        Note that if you specify a ``pages_to_draw`` list, pages not in that
-        list will be blank since the drawing function will not be called on that
-        page. This could have a side-affect if you rely on the drawing function
-        modifying some global values. For example, in the nametags.py and preview.py demo
+        Notes
+        -----
+        If you specify a pages_to_draw list, pages not in that list will be
+        blank since the drawing function will not be called on that page. This
+        could have a side-affect if you rely on the drawing function modifying
+        some global values. For example, in the nametags.py and preview.py demo
         scripts, the colours for each label are picked by a pseduo-random number
         generator. However, in the preview script, this generator is not
-        advanced and so the colours on the last page are different.
+        advanced and so the colours on the last page differ between the preview
+        and the actual output.
 
         """
         # Save our arguments.
-        specs._calculate()
-        self.specs = deepcopy(specs)
+        specification._calculate()
+        self.specs = deepcopy(specification)
         self.drawing_callable = drawing_callable
         self.pages_to_draw = pages_to_draw
         self.border = border
@@ -70,9 +81,9 @@ class Sheet(object):
             self.shade_missing = shade_missing
 
         # Set up some internal variables.
-        self._lw = specs.label_width * mm
-        self._lh = specs.label_height * mm
-        self._cr = specs.corner_radius * mm
+        self._lw = self.specs.label_width * mm
+        self._lh = self.specs.label_height * mm
+        self._cr = self.specs.corner_radius * mm
         self._used = {}
         self._pages = []
         self._current_page = None
@@ -134,14 +145,17 @@ class Sheet(object):
         """Allows a page to be marked as already partially used so you can
         generate a PDF to print on the remaining labels.
 
-        :param page: The page number to mark as partially used. The page must
-                     not have already been started, i.e., for page 1 this must
-                     be called before any labels have been started, for page 2
-                     this must be called before the first page is full and so
-                     on.
-        :param used_labels: An iterable of (row, column) pairs marking which
-                            labels have been used already. The rows and columns
-                            must be within the bounds of the sheet.
+        Parameters
+        ----------
+        page: positive integer
+            The page number to mark as partially used. The page must not have
+            already been started, i.e., for page 1 this must be called before
+            any labels have been started, for page 2 this must be called before
+            the first page is full and so on.
+        used_labels: iterable
+            An iterable of (row, column) pairs marking which labels have been
+            used already. The rows and columns must be within the bounds of the
+            sheet.
 
         """
         # Check the page number is valid.
@@ -164,12 +178,22 @@ class Sheet(object):
         self._used[page] = used
 
     def _new_page(self):
+        """Helper function to start a new page. Not intended for external use.
+
+        """
         self._current_page = Drawing(*self._pagesize)
         self._pages.append(self._current_page)
         self.page_count += 1
         self._position = [1, 0]
 
     def _next_label(self):
+        """Helper method to move to the next label. Not intended for external use.
+
+        This does not increment the label_count attribute as the next label may
+        not be usable (it may have been marked as missing through
+        partial_pages). See _next_unused_label for generally more useful method.
+
+        """
         # Special case for the very first label.
         if self.page_count == 0:
             self._new_page()
@@ -187,36 +211,72 @@ class Sheet(object):
         self._position[1] += 1
 
     def _next_unused_label(self):
+        """Helper method to move to the next unused label. Not intended for external use.
+
+        This method will shade in any missing labels if desired, and will
+        increment the label_count attribute once a suitable label position has
+        been found.
+
+        """
         self._next_label()
+
+        # This label may be missing.
         if self.page_count in self._used:
+            # Keep try while the label is missing.
             missing = self._used.get(self.page_count, set())
             while tuple(self._position) in missing:
+                # Throw the missing information away now we have used it. This
+                # allows the _shade_remaining_missing method to work.
                 missing.discard(tuple(self._position))
+
+                # Shade the missing label if desired.
                 if self.shade_missing:
                     self._draw_label(self._missing_label)
+
+                # Try our luck with the next label.
                 self._next_label()
                 missing = self._used.get(self.page_count, set())
+
+        # Increment the count now we have found a suitable position.
         self.label_count += 1
 
     def _missing_label(self, label, width, height, obj=None):
+        """Helper drawing callable to shade a missing label. Not intended for external use.
+
+        """
+        # Sanity check. Should never be False if we get here but who knows.
         if not self.shade_missing:
             return
 
+        # Shade a rectangle over the entire bounding box. The clipping path will
+        # take care of any rounded corners.
         r = shapes.Rect(0, 0, width, height)
         r.fillColor = self.shade_missing
         r.strokeColor = None
         label.add(r)
 
     def _shade_remaining_missing(self):
+        """Helper method to shade any missing labels remaining on the current
+        page. Not intended for external use.
+
+        Note that this will modify the internal _position attribute and should
+        therefore only be used once all the 'real' labels have been drawn.
+
+        """
+        # Sanity check.
         if not self.shade_missing:
             return
 
+        # Run through each missing label left in the current page and shade it.
         missing = self._used.get(self.page_count, set())
         for position in missing:
             self._position = position
             self._draw_label(self._missing_label)
 
     def _draw_label(self, drawing_callable, obj=None):
+        """Helper method to draw on the current label. Not intended for external use.
+
+        """
         # Create a drawing object for this label and add the border.
         label = Drawing(float(self._lw), float(self._lh))
         label.add(self._border)
@@ -245,88 +305,144 @@ class Sheet(object):
     def add_label(self, obj):
         """Add a label to the sheet.
 
-        :param obj: The object to draw on the label. This is passed without
-                    modification or copying to the drawing function.
+        Parameters
+        ----------
+        obj:
+            The object to draw on the label. This is passed without modification
+            or copying to the drawing function.
 
         """
         # Find the next available label.
         self._next_unused_label()
+
+        # Have we been told to skip this page?
         if self.pages_to_draw and self.page_count not in self.pages_to_draw:
             return
 
         # Draw it.
         self._draw_label(self.drawing_callable, obj)
 
-    def add_labels(self, obj_iterable):
+    def add_labels(self, objects):
         """Add multiple labels to the sheet.
 
-        :param obj_iterable: An iterable of the objects to add. Each of these
-                             will be passed to :method:`add_label`. Note that,
-                             if this is a generator, it will be consumed.
+        Parameters
+        ----------
+        objects: iterable
+            An iterable of the objects to add. Each of these will be passed to
+            the add_label method. Note that if this is a generator it will be
+            consumed.
 
         """
-        for obj in obj_iterable:
+        for obj in objects:
             self.add_label(obj)
 
-    def save(self, filename):
+    def save(self, filelike):
         """Save the file as a PDF.
 
-        :param filename: The filename to save the labels under. Any existing
-                         contents will be overwritten.
+        Parameters
+        ----------
+        filelike: path or file-like object
+            The filename or file-like object to save the labels under. Any
+            existing contents will be overwritten.
 
         """
+        # Shade any remaining missing labels if desired.
         self._shade_remaining_missing()
-        canvas = Canvas(filename, pagesize=self._pagesize)
+
+        # Create a canvas.
+        canvas = Canvas(filelike, pagesize=self._pagesize)
+
+        # Render each created page onto the canvas.
         for page in self._pages:
             renderPDF.draw(page, canvas, 0, 0)
             canvas.showPage()
+
+        # Done.
         canvas.save()
 
-    def preview(self, page, file_like, format='png', dpi=72, background_color=0xFFFFFF):
+    def preview(self, page, filelike, format='png', dpi=72, background_colour=0xFFFFFF):
         """Render a preview image of a page.
 
-        :param page: Which page to render.
-        :param file_like: Can be a filename as a string, a Python file object,
-                          or something which behaves like a Python file object.
-                          For example, if you were using the Django web
-                          framework, an HttpResponse object could be
-                          passed to render the preview to the browser (as long
-                          as you remember to set the mimetype of the response).
-                          If you pass a filename, the existing contents will be
-                          overwritten.
-        :param format: The format to render the page as.
-        :param dpi: The dots-per-inch to use when rendering.
-        :param background_color: What color background to use.
+        Parameters
+        ----------
+        page: positive integer
+            Which page to render. Must be in the range [1, page_count]
+        filelike: path or file-like object
+            Can be a filename as a string, a Python file object, or something
+            which behaves like a Python file object.  For example, if you were
+            using the Django web framework, an HttpResponse object could be
+            passed to render the preview to the browser (as long as you remember
+            to set the mimetype of the response).  If you pass a filename, the
+            existing contents will be overwritten.
+        format: string
+            The image format to use for the preview. ReportLab uses the Python
+            Imaging Library (PIL) internally, so any PIL format should be
+            supported.
+        dpi: positive real
+            The dots-per-inch to use when rendering.
+        background_colour: Hex colour specification
+            What color background to use.
 
-        If you are creating this sheet for a preview only, then use the
-        ``pages`` parameter to the constructor to avoid the drawing function
+        Notes
+        -----
+        If you are creating this sheet for a preview only, you can pass the
+        pages_to_draw parameter to the constructor to avoid the drawing function
         being called for all the labels on pages you'll never look at. If you
         preview a page you did not tell the sheet to draw, you will get a blank
         image.
 
+        Raises
+        ------
+        ValueError:
+            If the page number is not valid.
+
         """
+        # Check the page number.
         if page < 1 or page > self.page_count:
             raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
-        self._shade_remaining_missing()
-        renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_color)
 
-    def preview_string(self, page, format='png', dpi=72, background_color=0xFFFFFF):
+        # Shade any remaining missing labels if desired.
+        self._shade_remaining_missing()
+
+        # Let ReportLab do the heavy lifting.
+        renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_colour)
+
+    def preview_string(self, page, format='png', dpi=72, background_colour=0xFFFFFF):
         """Render a preview image of a page as a string.
 
-        :param page: Which page to render.
-        :param format: The format to render the page as.
-        :param dpi: The dots-per-inch to use when rendering.
-        :param background_color: What color background to use.
-        :return: A string containing the preview image.
+        Parameters
+        ----------
+        page: positive integer
+            Which page to render. Must be in the range [1, page_count]
+        format: string
+            The image format to use for the preview. ReportLab uses the Python
+            Imaging Library (PIL) internally, so any PIL format should be
+            supported.
+        dpi: positive real
+            The dots-per-inch to use when rendering.
+        background_colour: Hex colour specification
+            What color background to use.
 
-        If you are creating this sheet for a preview only, then use the
-        ``pages`` parameter to the constructor to avoid the drawing function
+        Notes
+        -----
+        If you are creating this sheet for a preview only, you can pass the
+        pages_to_draw parameter to the constructor to avoid the drawing function
         being called for all the labels on pages you'll never look at. If you
         preview a page you did not tell the sheet to draw, you will get a blank
         image.
 
+        Raises
+        ------
+        ValueError:
+            If the page number is not valid.
+
         """
+        # Check the page number.
         if page < 1 or page > self.page_count:
             raise ValueError("Invalid page number; should be between 1 and {0:d}.".format(self.page_count))
+
+        # Shade any remaining missing labels if desired.
         self._shade_remaining_missing()
-        return renderPM.drawToString(self._pages[page-1], format, dpi, background_color)
+
+        # Let ReportLab do the heavy lifting.
+        return renderPM.drawToString(self._pages[page-1], format, dpi, background_colour)
