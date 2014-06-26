@@ -31,6 +31,8 @@ The following examples are available in the demos directory:
 * [Basic](demos/basic.py) - a introduction to the basic use of pylabels.
 * [Partial pages](demos/partial_page.py) - how to produce partial pages (i.e.,
   pages with some of the labels previously used).
+* [Background colours](demos/background_colours.py) - examples of solid,
+  striped and hatched backgrounds of different colours.
 * [Nametags](demos/nametags.py) - creates a set of nametags from the list of
   names in the names.txt file. Includes the use of two custom fonts, font size
   selection, and centred text.
