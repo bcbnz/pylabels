@@ -28,14 +28,16 @@ Examples
 
 The following examples are available in the demos directory on GitHub:
 
--  `Basic <https://github.com/blairbonnett/pylabels/blob/1.0.0/demos/basic.py>`_ - a introduction to the basic use of
+-  `Basic <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/basic.py>`_ - a introduction to the basic use of
    pylabels.
--  `Partial pages <https://github.com/blairbonnett/pylabels/blob/1.0.0/demos/partial_page.py>`_ - how to produce partial
+-  `Partial pages <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/partial_page.py>`_ - how to produce partial
    pages (i.e., pages with some of the labels previously used).
--  `Nametags <https://github.com/blairbonnett/pylabels/blob/1.0.0/demos/nametags.py>`_ - creates a set of nametags from the
+-  `Background colours <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/background_colours.py>`_ - examples of solid,
+   striped and hatched backgrounds of different colours.
+-  `Nametags <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/nametags.py>`_ - creates a set of nametags from the
    list of names in the names.txt file. Includes the use of two custom
    fonts, font size selection, and centred text.
--  `Image preview <https://github.com/blairbonnett/pylabels/blob/1.0.0/demos/preview.py>`_ - generates image previews of
+-  `Image preview <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/preview.py>`_ - generates image previews of
    two of the pages from the nametags demo.
 
 Demo fonts
