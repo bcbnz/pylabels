@@ -1,6 +1,6 @@
 pylabels is a Python library for creating PDFs to print sheets of
 labels. It uses the `ReportLab PDF
-toolkit <http://www.reportlab.com/software/opensource/>`_ to produce
+toolkit <http://www.reportlab.com/opensource/>`_ to produce
 the PDF.
 
 Basically, the user creates a set of specifications of the label sizes
@@ -28,16 +28,19 @@ Examples
 
 The following examples are available in the demos directory on GitHub:
 
--  `Basic <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/basic.py>`_ - a introduction to the basic use of
+-  `Basic <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/basic.py>`_ - a introduction to the basic use of
    pylabels.
--  `Partial pages <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/partial_page.py>`_ - how to produce partial
+-  `Partial pages <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/partial_page.py>`_ - how to produce partial
    pages (i.e., pages with some of the labels previously used).
--  `Background colours <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/background_colours.py>`_ - examples of solid,
-   striped and hatched backgrounds of different colours.
--  `Nametags <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/nametags.py>`_ - creates a set of nametags from the
+-  `Background colours <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/background_colours.py>`_ - examples of solid,
+   striped and hatched backgrounds of different colours on each label.
+-  `Page background <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/page_background.py>`_ - how to add a background
+   image for each page.
+-  `Padding <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/padding.py>`_ - how to add padding to the labels.
+-  `Nametags <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/nametags.py>`_ - creates a set of nametags from the
    list of names in the names.txt file. Includes the use of two custom
    fonts, font size selection, and centred text.
--  `Image preview <https://github.com/blairbonnett/pylabels/blob/1.0.1/demos/preview.py>`_ - generates image previews of
+-  `Image preview <https://github.com/blairbonnett/pylabels/blob/1.1.0/demos/preview.py>`_ - generates image previews of
    two of the pages from the nametags demo.
 
 Demo fonts
@@ -54,7 +57,7 @@ demos folder:
 License
 -------
 
-Copyright (C) 2012, 2013, 2014 Blair Bonnett
+Copyright (C) 2012, 2013, 2014, 2015 Blair Bonnett
 
 pylabels is free software: you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
