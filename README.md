@@ -35,6 +35,7 @@ The following examples are available in the demos directory:
   striped and hatched backgrounds of different colours on each label.
 * [Page background](demos/page_background.py) - how to add a background
   image for each page.
+* [Padding](demos/padding.py) - how to add padding to the labels.
 * [Nametags](demos/nametags.py) - creates a set of nametags from the list of
   names in the names.txt file. Includes the use of two custom fonts, font size
   selection, and centred text.

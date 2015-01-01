@@ -21,7 +21,7 @@ from reportlab.lib.units import mm
 from reportlab.graphics import renderPDF
 from reportlab.graphics import renderPM
 from reportlab.graphics.shapes import Drawing, ArcPath, Image
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from decimal import Decimal
 mm = Decimal(mm)
@@ -84,6 +84,11 @@ class Sheet(object):
         self._lw = self.specs.label_width * mm
         self._lh = self.specs.label_height * mm
         self._cr = self.specs.corner_radius * mm
+        self._dw = (self.specs.label_width - self.specs.left_padding - self.specs.right_padding) * mm
+        self._dh = (self.specs.label_height - self.specs.top_padding - self.specs.bottom_padding) * mm
+        self._lp = self.specs.left_padding * mm
+        self._bp = self.specs.bottom_padding * mm
+        self._pr = self.specs.padding_radius * mm
         self._used = {}
         self._pages = []
         self._current_page = None
@@ -119,25 +124,30 @@ class Sheet(object):
         else:
             self._bgimage = None
 
-        # Have to create the border from a path so we can use it as a clip path.
-        border = ArcPath()
+        # Borders and clipping paths. We need two clipping paths; one for the
+        # label as a whole (which is identical to the border), and one for the
+        # available drawing area (i.e., after taking the padding into account).
+        # This is necessary because sometimes the drawing area can extend
+        # outside the border at the corners, e.g., if there is left padding
+        # only and no padding radius, then the 'available' area corners will be
+        # square and go outside the label corners if they are rounded.
 
         # Copy some properties to a local scope.
-        h, w, cr = float(self._lh), float(self._lw), float(self._cr)
+        h, w, r = float(self._lh), float(self._lw), float(self._cr)
 
-        # If the border has rounded corners.
-        if self._cr:
-            border.moveTo(w - cr, 0)
-            border.addArc(w - cr, cr, cr, -90, 0)
-            border.lineTo(w, h - cr)
-            border.addArc(w - cr, h - cr, cr, 0, 90)
-            border.lineTo(cr, h)
-            border.addArc(cr, h - cr, cr, 90, 180)
-            border.lineTo(0, cr)
-            border.addArc(cr, cr, cr, 180, 270)
+        # Create the border from a path. If the corners are not rounded, skip
+        # adding the arcs.
+        border = ArcPath()
+        if r:
+            border.moveTo(w - r, 0)
+            border.addArc(w - r, r, r, -90, 0)
+            border.lineTo(w, h - r)
+            border.addArc(w - r, h - r, r, 0, 90)
+            border.lineTo(r, h)
+            border.addArc(r, h - r, r, 90, 180)
+            border.lineTo(0, r)
+            border.addArc(r, r, r, 180, 270)
             border.closePath()
-
-        # No rounded corners.
         else:
             border.moveTo(0, 0)
             border.lineTo(w, 0)
@@ -145,25 +155,51 @@ class Sheet(object):
             border.lineTo(0, h)
             border.closePath()
 
-        # Use it as a clip path.
-        border.isClipPath = 1
-        border.strokeColor = None
+        # Set the properties and store.
+        border.isClipPath = 0
+        border.strokeWidth = 1
+        border.strokeColor = colors.black
         border.fillColor = None
-
-        # And done.
         self._border = border
 
-        # The border doesn't show up if its part of a clipping path when
-        # outputting to an image. If its needed, make a copy and turn the
-        # clipping path off.
-        if self.border:
-            from copy import copy
-            self._border_visible = copy(self._border)
-            self._border_visible.isClipPath = 0
-            self._border_visible.strokeWidth = 1
-            self._border_visible.strokeColor = colors.black
+        # Clip path for the label is the same as the border.
+        self._clip_label = deepcopy(border)
+        self._clip_label.isClipPath = 1
+        self._clip_label.strokeColor = None
+        self._clip_label.fillColor = None
+
+        # If there is no padding (i.e., the drawable area is the same as the
+        # label area) then we can just use the label clip path for the drawing
+        # clip path.
+        if (self._dw == self._lw) and (self._dh == self._lh):
+            self._clip_drawing = self._clip_label
+
+        # Otherwise we have to generate a separate path.
         else:
-            self._border_visible = None
+            h, w, r = float(self._dh), float(self._dw), float(self._pr)
+            clip = ArcPath()
+            if r:
+                clip.moveTo(w - r, 0)
+                clip.addArc(w - r, r, r, -90, 0)
+                clip.lineTo(w, h - r)
+                clip.addArc(w - r, h - r, r, 0, 90)
+                clip.lineTo(r, h)
+                clip.addArc(r, h - r, r, 90, 180)
+                clip.lineTo(0, r)
+                clip.addArc(r, r, r, 180, 270)
+                clip.closePath()
+            else:
+                clip.moveTo(0, 0)
+                clip.lineTo(w, 0)
+                clip.lineTo(w, h)
+                clip.lineTo(0, h)
+                clip.closePath()
+
+            # Set the clipping properties.
+            clip.isClipPath = 1
+            clip.strokeColor = None
+            clip.fillColor = None
+            self._clip_drawing = clip
 
     def partial_page(self, page, used_labels):
         """Allows a page to be marked as already partially used so you can
@@ -303,16 +339,7 @@ class Sheet(object):
         """Helper method to draw on the current label. Not intended for external use.
 
         """
-        # Create a drawing object for this label and add the border.
-        label = Drawing(float(self._lw), float(self._lh))
-        label.add(self._border)
-        if self._border_visible:
-            label.add(self._border_visible)
-
-        # Call the drawing function.
-        drawing_callable(label, float(self._lw), float(self._lh), obj)
-
-        # Calculate the bottom edge of the label.
+        # Calculate the bottom edge of the label and the drawing area.
         bottom = self.specs.sheet_height - self.specs.top_margin
         bottom -= (self.specs.label_height * self._position[0])
         bottom -= (self.specs.row_gap * (self._position[0] - 1))
@@ -324,7 +351,26 @@ class Sheet(object):
         left += (self.specs.column_gap * (self._position[1] - 1))
         left *= mm
 
-        # Render the label on the sheet.
+        # Start a drawing for the whole label.
+        label = Drawing(float(self._lw), float(self._lh))
+        label.add(self._clip_label)
+
+        # And one for the available area (i.e., after padding).
+        available = Drawing(float(self._dw), float(self._dh))
+        available.add(self._clip_drawing)
+
+        # Call the drawing function.
+        drawing_callable(available, float(self._dw), float(self._dh), obj)
+
+        # Render the contents on the label.
+        available.shift(float(self._lp), float(self._bp))
+        label.add(available)
+
+        # Draw the border if requested.
+        if self.border:
+            label.add(self._border)
+
+        # Add the label to the page.
         label.shift(float(left), float(bottom))
         self._current_page.add(label)
 

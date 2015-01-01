@@ -60,10 +60,19 @@ class Specification(object):
         bottom_margin: positive dimension
             The gap between the bottom edge of the sheet and the last row.
 
-        Additional dimensions
+        Padding
+        -------
+        left_padding, right_padding, top_padding, bottom_padding: positive dimensions, default 0
+            The padding between the edges of the label and the area available
+            to draw on.
+
+        Corners
         ---------------------
         corner_radius: positive dimension, default 0
             Gives the labels rounded corners with the given radius.
+        padding_radius: positive dimension, default 0
+            Give the drawing area rounded corners. If there is no padding, this
+            must be set to zero.
 
         Background
         ----------
@@ -100,7 +109,12 @@ class Specification(object):
         self._bottom_margin = kwargs.pop('bottom_margin', None)
 
         # Optional arguments with default values.
+        self._left_padding = kwargs.pop('left_padding', 0)
+        self._right_padding = kwargs.pop('right_padding', 0)
+        self._top_padding = kwargs.pop('top_padding', 0)
+        self._bottom_padding = kwargs.pop('bottom_padding', 0)
         self._corner_radius = Decimal(kwargs.pop('corner_radius', 0))
+        self._padding_radius = Decimal(kwargs.pop('padding_radius', 0))
         self._background_image = kwargs.pop('background_image', None)
         self._background_filename = kwargs.pop('background_filename', None)
 
@@ -133,7 +147,8 @@ class Specification(object):
 
         # Check margins / gaps are not smaller than zero if given.
         # At the same time, force the values to decimals.
-        for margin in ('_left_margin', '_column_gap', '_right_margin', '_top_margin', '_row_gap', '_bottom_margin'):
+        for margin in ('_left_margin', '_column_gap', '_right_margin', '_top_margin', '_row_gap', '_bottom_margin',
+                       '_left_padding', '_right_padding', '_top_padding', '_bottom_padding'):
             val = getattr(self, margin)
             if val is not None:
                 if margin in self._autoset:
@@ -154,6 +169,18 @@ class Specification(object):
             raise InvalidDimension("Corner radius cannot be more than half the label width.")
         if self._corner_radius > (self._label_height / 2):
             raise InvalidDimension("Corner radius cannot be more than half the label height.")
+
+        # If there is no padding, we don't need the padding radius.
+        if (self._left_padding + self._right_padding + self._top_padding + self._bottom_padding) == 0:
+            if self._padding_radius != 0:
+                raise InvalidDimension("Padding radius must be zero if there is no padding.")
+        else:
+            if (self._left_padding + self._right_padding) >= self._label_width:
+                raise InvalidDimension("Sum of horizontal padding must be less than the label width.")
+            if (self._top_padding + self._bottom_padding) >= self._label_height:
+                raise InvalidDimension("Sum of vertical padding must be less than the label height.")
+            if self._padding_radius < 0:
+                raise InvalidDimension("Padding radius cannot be less than zero.")
 
         # Calculate the amount of spare space.
         hspace = self._sheet_width - (self._label_width * self._columns)
@@ -349,8 +376,13 @@ class Specification(object):
     row_gap = create_accessor('_row_gap', deletable=True)
     bottom_margin = create_accessor('_bottom_margin', deletable=True)
     corner_radius = create_accessor('_corner_radius')
+    padding_radius = create_accessor('_padding_radius')
     background_image = create_accessor('_background_image', deletable=True)
     background_filename = create_accessor('_background_filename', deletable=True)
+    left_padding = create_accessor('_left_padding', deletable=True)
+    right_padding = create_accessor('_right_padding', deletable=True)
+    top_padding = create_accessor('_top_padding', deletable=True)
+    bottom_padding = create_accessor('_bottom_padding', deletable=True)
 
     # Don't need the helper function any more.
     del create_accessor
