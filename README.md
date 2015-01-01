@@ -21,7 +21,7 @@ it interfering with other labels.
 Once all the items have been added, the labels can be saved as a PDF, or a
 preview of a page can be saved as an image.
 
-[1]: http://www.reportlab.com/software/opensource/
+[1]: http://www.reportlab.com/opensource/
 
 Examples
 ========
