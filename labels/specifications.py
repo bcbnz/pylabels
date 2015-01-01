@@ -15,6 +15,7 @@
 # pylabels.  If not, see <http://www.gnu.org/licenses/>.
 
 from decimal import Decimal
+import json
 
 
 class InvalidDimension(ValueError):
@@ -220,7 +221,7 @@ class Specification(object):
                 if getattr(self, margin) is None:
                     setattr(self, margin, auto_margin)
 
-    def bounding_boxes(self, mode='fraction'):
+    def bounding_boxes(self, mode='fraction', output='dict'):
         """Get the bounding boxes of the labels on a page.
 
         Parameters
@@ -230,19 +231,27 @@ class Specification(object):
             height and width of the sheet. If 'actual', they are the actual
             position of the labels in millimetres from the top-left of the
             sheet.
+        output: 'dict', 'json'
+            If 'dict', a dictionary with label identifier tuples (row, column)
+            as keys and a dictionary with 'left', 'right', 'top', and 'bottom'
+            entries as the values.
+            If 'json', a JSON encoded string which represents a dictionary with
+            keys of the string format 'rowxcolumn' and each value being a
+            bounding box dictionary with 'left', 'right', 'top', and 'bottom'
+            entries.
 
         Returns
         -------
-        A dictionary. The keys are the label identifier as a tuple (row, column)
-        and the values are the bounding box for each label as a further
-        dictionary with keys 'left', 'right', 'top', and 'bottom'.
+        The bounding boxes in the format set by the output parameter.
 
         """
         boxes = {}
 
-        # Check the mode.
+        # Check the parameters.
         if mode not in ('fraction', 'actual'):
             raise ValueError("Unknown mode {0}.".format(mode))
+        if output not in ('dict', 'json'):
+            raise ValueError("Unknown output {0}.".format(output))
 
         # Iterate over the rows.
         for row in range(1, self.rows + 1):
@@ -268,9 +277,18 @@ class Specification(object):
                     box = {'top': top, 'bottom': bottom, 'left': left, 'right': right}
 
                 # Add to the collection.
-                boxes[(row, column)] = box
+                if output == 'json':
+                    boxes['{0:d}x{1:d}'.format(row, column)] = box
+                    box['top'] = float(box['top'])
+                    box['bottom'] = float(box['bottom'])
+                    box['left'] = float(box['left'])
+                    box['right'] = float(box['right'])
+                else:
+                    boxes[(row, column)] = box
 
         # Done.
+        if output == 'json':
+            return json.dumps(boxes)
         return boxes
 
     # Helper function to create an accessor for one of the properties.
