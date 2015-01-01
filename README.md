@@ -32,7 +32,9 @@ The following examples are available in the demos directory:
 * [Partial pages](demos/partial_page.py) - how to produce partial pages (i.e.,
   pages with some of the labels previously used).
 * [Background colours](demos/background_colours.py) - examples of solid,
-  striped and hatched backgrounds of different colours.
+  striped and hatched backgrounds of different colours on each label.
+* [Page background](demos/page_background.py) - how to add a background
+  image for each page.
 * [Nametags](demos/nametags.py) - creates a set of nametags from the list of
   names in the names.txt file. Includes the use of two custom fonts, font size
   selection, and centred text.
@@ -51,7 +53,7 @@ folder:
 License
 =======
 
-Copyright (C) 2012, 2013, 2014 Blair Bonnett
+Copyright (C) 2012, 2013, 2014, 2015 Blair Bonnett
 
 pylabels is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License as published by the Free Software

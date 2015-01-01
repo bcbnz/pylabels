@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012, 2013, 2014 Blair Bonnett
+# Copyright (C) 2012, 2013, 2014, 2015 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -64,6 +64,17 @@ class Specification(object):
         corner_radius: positive dimension, default 0
             Gives the labels rounded corners with the given radius.
 
+        Background
+        ----------
+        background_image: reportlab.graphics.shape.Image
+            An image to use as the background to the page. This will be
+            automatically sized to fit the page; make sure it has the correct
+            aspect ratio.
+        background_filename: string
+            Filename of an image to use as a background to the page. If both
+            this and background_image are given, then background_image will
+            take precedence.
+
         Raises
         ------
         InvalidDimension
@@ -89,6 +100,8 @@ class Specification(object):
 
         # Optional arguments with default values.
         self._corner_radius = Decimal(kwargs.pop('corner_radius', 0))
+        self._background_image = kwargs.pop('background_image', None)
+        self._background_filename = kwargs.pop('background_filename', None)
 
         # Leftover arguments.
         if kwargs:
@@ -318,6 +331,8 @@ class Specification(object):
     row_gap = create_accessor('_row_gap', deletable=True)
     bottom_margin = create_accessor('_bottom_margin', deletable=True)
     corner_radius = create_accessor('_corner_radius')
+    background_image = create_accessor('_background_image', deletable=True)
+    background_filename = create_accessor('_background_filename', deletable=True)
 
     # Don't need the helper function any more.
     del create_accessor

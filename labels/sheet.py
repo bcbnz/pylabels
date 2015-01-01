@@ -1,6 +1,6 @@
 # This file is part of pylabels, a Python library to create PDFs for printing
 # labels.
-# Copyright (C) 2012, 2013, 2014 Blair Bonnett
+# Copyright (C) 2012, 2013, 2014, 2015 Blair Bonnett
 #
 # pylabels is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License as published by the Free Software
@@ -20,7 +20,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from reportlab.graphics import renderPDF
 from reportlab.graphics import renderPM
-from reportlab.graphics.shapes import Drawing, ArcPath
+from reportlab.graphics.shapes import Drawing, ArcPath, Image
 from copy import deepcopy
 
 from decimal import Decimal
@@ -94,6 +94,30 @@ class Sheet(object):
         self._position = [1, 0]
         self.label_count = 0
         self.page_count = 0
+
+        # Background image.
+        if self.specs.background_image:
+            self._bgimage = deepcopy(self.specs.background_image)
+
+            # Different classes are scaled in different ways...
+            if isinstance(self._bgimage, Image):
+                self._bgimage.x = 0
+                self._bgimage.y = 0
+                self._bgimage.width = self._pagesize[0]
+                self._bgimage.height = self._pagesize[1]
+            elif isinstance(self._bgimage, Drawing):
+                self._bgimage.shift(0, 0)
+                self._bgimage.scale(self._pagesize[0]/self._bgimage.width, self._pagesize[1]/self._bgimage.height)
+            else:
+                raise ValueError("Unhandled background type.")
+
+        # Background from a filename.
+        elif self.specs.background_filename:
+            self._bgimage = Image(0, 0, self._pagesize[0], self._pagesize[1], self.specs.background_filename)
+
+        # No background.
+        else:
+            self._bgimage = None
 
         # Have to create the border from a path so we can use it as a clip path.
         border = ArcPath()
@@ -182,6 +206,8 @@ class Sheet(object):
 
         """
         self._current_page = Drawing(*self._pagesize)
+        if self._bgimage:
+            self._current_page.add(self._bgimage)
         self._pages.append(self._current_page)
         self.page_count += 1
         self._position = [1, 0]
