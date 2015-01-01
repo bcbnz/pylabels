@@ -431,7 +431,7 @@ class Sheet(object):
         self._shade_remaining_missing()
 
         # Let ReportLab do the heavy lifting.
-        renderPM.drawToFile(self._pages[page-1], file_like, format, dpi, background_colour)
+        renderPM.drawToFile(self._pages[page-1], filelike, format, dpi, background_colour)
 
     def preview_string(self, page, format='png', dpi=72, background_colour=0xFFFFFF):
         """Render a preview image of a page as a string.
