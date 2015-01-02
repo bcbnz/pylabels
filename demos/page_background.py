@@ -26,6 +26,7 @@
 
 import labels
 from reportlab.graphics import shapes
+from reportlab.lib import colors
 import os.path
 
 # Paths to the images used for backgrounds.
@@ -74,8 +75,8 @@ process_sheet(specs, "page_background_image.pdf")
 # Option three: use a ReportLab drawing.
 # Again, this will be automatically scaled so choose the size to suit you.
 # Using the size of the page sounds like a sensible option.
-bg = shapes.Drawing(width=210, height=297)
+bg = shapes.Drawing(width=210.5, height=297)
 bg.add(shapes.String(105, 50, "My cool background", textAnchor="middle"))
-bg.add(shapes.Wedge(10, 155, 95, 30, 90, fillColor='green'))
+bg.add(shapes.Wedge(10, 155, 95, 30, 90, fillColor=colors.green))
 specs = labels.Specification(210, 297, 2, 8, 90, 25, corner_radius=2, background_image=bg)
 process_sheet(specs, "page_background_drawing.pdf")

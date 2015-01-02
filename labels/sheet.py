@@ -476,8 +476,22 @@ class Sheet(object):
         # Shade any remaining missing labels if desired.
         self._shade_remaining_missing()
 
+        # Rendering to an image (as opposed to a PDF) requires any background
+        # to have an integer width and height if it is a ReportLab Image
+        # object. Drawing objects are exempt from this.
+        oldw, oldh = None, None
+        if isinstance(self._bgimage, Image):
+            oldw, oldh = self._bgimage.width, self._bgimage.height
+            self._bgimage.width = int(oldw) + 1
+            self._bgimage.height = int(oldh) + 1
+
         # Let ReportLab do the heavy lifting.
         renderPM.drawToFile(self._pages[page-1], filelike, format, dpi, background_colour)
+
+        # Restore the size of the background image if we changed it.
+        if oldw:
+            self._bgimage.width = oldw
+            self._bgimage.height = oldh
 
     def preview_string(self, page, format='png', dpi=72, background_colour=0xFFFFFF):
         """Render a preview image of a page as a string.
@@ -516,5 +530,22 @@ class Sheet(object):
         # Shade any remaining missing labels if desired.
         self._shade_remaining_missing()
 
+        # Rendering to an image (as opposed to a PDF) requires any background
+        # to have an integer width and height if it is a ReportLab Image
+        # object. Drawing objects are exempt from this.
+        oldw, oldh = None, None
+        if isinstance(self._bgimage, Image):
+            oldw, oldh = self._bgimage.width, self._bgimage.height
+            self._bgimage.width = int(oldw) + 1
+            self._bgimage.height = int(oldh) + 1
+
         # Let ReportLab do the heavy lifting.
-        return renderPM.drawToString(self._pages[page-1], format, dpi, background_colour)
+        s = renderPM.drawToString(self._pages[page-1], format, dpi, background_colour)
+
+        # Restore the size of the background image if we changed it.
+        if oldw:
+            self._bgimage.width = oldw
+            self._bgimage.height = oldh
+
+        # Done.
+        return s
