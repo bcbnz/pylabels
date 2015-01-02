@@ -293,7 +293,7 @@ class Sheet(object):
 
                 # Shade the missing label if desired.
                 if self.shade_missing:
-                    self._draw_label(self._missing_label)
+                    self._shade_missing_label()
 
                 # Try our luck with the next label.
                 self._next_label()
@@ -302,20 +302,43 @@ class Sheet(object):
         # Increment the count now we have found a suitable position.
         self.label_count += 1
 
-    def _missing_label(self, label, width, height, obj=None):
-        """Helper drawing callable to shade a missing label. Not intended for external use.
+    def _calculate_edges(self):
+        """Calculate edges of the current label. Not intended for external use.
+
 
         """
-        # Sanity check. Should never be False if we get here but who knows.
-        if not self.shade_missing:
-            return
+        # Calculate the left edge of the label.
+        left = self.specs.left_margin
+        left += (self.specs.label_width * (self._position[1] - 1))
+        left += (self.specs.column_gap * (self._position[1] - 1))
+        left *= mm
 
-        # Shade a rectangle over the entire bounding box. The clipping path will
-        # take care of any rounded corners.
-        r = shapes.Rect(0, 0, width, height)
+        # And the bottom.
+        bottom = self.specs.sheet_height - self.specs.top_margin
+        bottom -= (self.specs.label_height * self._position[0])
+        bottom -= (self.specs.row_gap * (self._position[0] - 1))
+        bottom *= mm
+
+        # Done.
+        return float(left), float(bottom)
+
+    def _shade_missing_label(self):
+        """Helper method to shade a missing label. Not intended for external use.
+
+        """
+        # Start a drawing for the whole label.
+        label = Drawing(float(self._lw), float(self._lh))
+        label.add(self._clip_label)
+
+        # Fill with a rectangle; the clipping path will take care of the borders.
+        r = shapes.Rect(0, 0, float(self._lw), float(self._lh))
         r.fillColor = self.shade_missing
         r.strokeColor = None
         label.add(r)
+
+        # Add the label to the page.
+        label.shift(*self._calculate_edges())
+        self._current_page.add(label)
 
     def _shade_remaining_missing(self):
         """Helper method to shade any missing labels remaining on the current
@@ -333,24 +356,12 @@ class Sheet(object):
         missing = self._used.get(self.page_count, set())
         for position in missing:
             self._position = position
-            self._draw_label(self._missing_label)
+            self._shade_missing_label()
 
     def _draw_label(self, drawing_callable, obj=None):
         """Helper method to draw on the current label. Not intended for external use.
 
         """
-        # Calculate the bottom edge of the label and the drawing area.
-        bottom = self.specs.sheet_height - self.specs.top_margin
-        bottom -= (self.specs.label_height * self._position[0])
-        bottom -= (self.specs.row_gap * (self._position[0] - 1))
-        bottom *= mm
-
-        # And the left edge.
-        left = self.specs.left_margin
-        left += (self.specs.label_width * (self._position[1] - 1))
-        left += (self.specs.column_gap * (self._position[1] - 1))
-        left *= mm
-
         # Start a drawing for the whole label.
         label = Drawing(float(self._lw), float(self._lh))
         label.add(self._clip_label)
@@ -371,7 +382,7 @@ class Sheet(object):
             label.add(self._border)
 
         # Add the label to the page.
-        label.shift(float(left), float(bottom))
+        label.shift(*self._calculate_edges())
         self._current_page.add(label)
 
     def add_label(self, obj):
