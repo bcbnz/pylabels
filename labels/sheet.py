@@ -22,6 +22,7 @@ from reportlab.graphics import renderPDF
 from reportlab.graphics import renderPM
 from reportlab.graphics.shapes import Drawing, ArcPath, Image
 from copy import copy, deepcopy
+from itertools import repeat
 
 from decimal import Decimal
 mm = Decimal(mm)
@@ -358,7 +359,7 @@ class Sheet(object):
             self._position = position
             self._shade_missing_label()
 
-    def _draw_label(self, drawing_callable, obj=None):
+    def _draw_label(self, obj, count):
         """Helper method to draw on the current label. Not intended for external use.
 
         """
@@ -371,7 +372,7 @@ class Sheet(object):
         available.add(self._clip_drawing)
 
         # Call the drawing function.
-        drawing_callable(available, float(self._dw), float(self._dh), obj)
+        self.drawing_callable(available, float(self._dw), float(self._dh), obj)
 
         # Render the contents on the label.
         available.shift(float(self._lp), float(self._bp))
@@ -381,11 +382,22 @@ class Sheet(object):
         if self.border:
             label.add(self._border)
 
-        # Add the label to the page.
-        label.shift(*self._calculate_edges())
-        self._current_page.add(label)
+        # Add however many copies we need to.
+        for i in range(count):
+            # Find the next available label.
+            self._next_unused_label()
 
-    def add_label(self, obj):
+            # Have we been told to skip this page?
+            if self.pages_to_draw and self.page_count not in self.pages_to_draw:
+                continue
+
+            # Add the label to the page. ReportLab stores the added drawing by
+            # reference so we have to copy it N times.
+            thislabel = copy(label)
+            thislabel.shift(*self._calculate_edges())
+            self._current_page.add(thislabel)
+
+    def add_label(self, obj, count=1):
         """Add a label to the sheet.
 
         Parameters
@@ -393,19 +405,16 @@ class Sheet(object):
         obj:
             The object to draw on the label. This is passed without modification
             or copying to the drawing function.
+        count: positive integer, default 1
+            How many copies of the label to add to the sheet. Note that the
+            drawing function will only be called once and the results copied
+            for each label. If the drawing function maintains any state
+            internally then using this parameter may break it.
 
         """
-        # Find the next available label.
-        self._next_unused_label()
+        self._draw_label(obj, count)
 
-        # Have we been told to skip this page?
-        if self.pages_to_draw and self.page_count not in self.pages_to_draw:
-            return
-
-        # Draw it.
-        self._draw_label(self.drawing_callable, obj)
-
-    def add_labels(self, objects):
+    def add_labels(self, objects, count=1):
         """Add multiple labels to the sheet.
 
         Parameters
@@ -414,10 +423,47 @@ class Sheet(object):
             An iterable of the objects to add. Each of these will be passed to
             the add_label method. Note that if this is a generator it will be
             consumed.
+        count: positive integer or iterable of positive integers, default 1
+            The number of copies of each label to add. If a single integer,
+            that many copies of every label are added. If an iterable, then
+            each value specifies how many copies of the corresponding label to
+            add. The iterables are advanced in parallel until one is exhausted;
+            extra values in the other one are ignored. This means that if there
+            are fewer count entries than objects, the objects corresponding to
+            the missing counts will not be added to the sheet.
+
+            Note that if this is a generator it will be consumed. Also note
+            that the drawing function will only be called once for each label
+            and the results copied for the repeats. If the drawing function
+            maintains any state internally then using this parameter may break
+            it.
 
         """
+        # If we can convert it to an int, do so and use the itertools.repeat()
+        # method to create an infinite iterator from it. Otherwise, assume it
+        # is an iterable or sequence.
+        try:
+            count = int(count)
+        except TypeError:
+            pass
+        else:
+            count = repeat(count)
+
+        # If it is not an iterable (e.g., a list or range object),
+        # create an iterator over it.
+        if not hasattr(count, 'next') and not hasattr(count, '__next__'):
+            count = iter(count)
+
+        # Go through the objects.
         for obj in objects:
-            self.add_label(obj)
+            # Check we have a count for this one.
+            try:
+                thiscount = next(count)
+            except StopIteration:
+                break
+
+            # Draw it.
+            self._draw_label(obj, thiscount)
 
     def save(self, filelike):
         """Save the file as a PDF.

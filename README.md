@@ -32,6 +32,8 @@ The following examples are available in the demos directory:
 * [Basic](demos/basic.py) - a introduction to the basic use of pylabels.
 * [Partial pages](demos/partial_page.py) - how to produce partial pages (i.e.,
   pages with some of the labels previously used).
+* [Repeated](demos/repeated.py) - how to use the count parameter to add
+  multiple copies of the same label.
 * [Background colours](demos/background_colours.py) - examples of solid,
   striped and hatched backgrounds of different colours on each label.
 * [Page background](demos/page_background.py) - how to add a background
