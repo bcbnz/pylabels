@@ -311,13 +311,15 @@ class Sheet(object):
         # Calculate the left edge of the label.
         left = self.specs.left_margin
         left += (self.specs.label_width * (self._position[1] - 1))
-        left += (self.specs.column_gap * (self._position[1] - 1))
+        if self.specs.column_gap:
+            left += (self.specs.column_gap * (self._position[1] - 1))
         left *= mm
 
         # And the bottom.
         bottom = self.specs.sheet_height - self.specs.top_margin
         bottom -= (self.specs.label_height * self._position[0])
-        bottom -= (self.specs.row_gap * (self._position[0] - 1))
+        if self.specs.row_gap:
+            bottom -= (self.specs.row_gap * (self._position[0] - 1))
         bottom *= mm
 
         # Done.
