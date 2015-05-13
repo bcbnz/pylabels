@@ -2,7 +2,7 @@
 pylabels
 ========
 
-**Latest release:** 1.1.2
+**Latest release:** 1.2.0
 
 pylabels is a Python library for creating PDFs to print sheets of labels. It
 uses the [ReportLab PDF toolkit][1] to produce the PDF, and works under both

@@ -6,7 +6,7 @@ with open('pypi.rst') as f:
     long_description = f.read()
 
 setup(name='pylabels',
-      version='1.1.2',
+      version='1.2.0',
       description='Library to generate PDFs for printing labels',
       long_description=long_description,
       author='Blair Bonnett',
