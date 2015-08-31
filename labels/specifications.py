@@ -206,6 +206,9 @@ class Specification(object):
             hcount -= (self._columns - 1)
         if self._right_margin is not None:
             hspace -= self._right_margin
+            if hspace < 0 and hspace > -0.001:
+                self._right_margin += hspace
+                hspace = 0
             if hspace < 0:
                 raise InvalidDimension("Right margin is too wide for the labels to fit on the sheet.")
             hcount -= 1
@@ -224,6 +227,9 @@ class Specification(object):
             vcount -= (self._rows - 1)
         if self._bottom_margin is not None:
             vspace -= self._bottom_margin
+            if vspace < 0 and vspace > -0.001:
+                self._bottom_margin += hspace
+                hspace = 0
             if vspace < 0:
                 raise InvalidDimension("Bottom margin is too tall for the labels to fit on the sheet.")
             vcount -= 1
