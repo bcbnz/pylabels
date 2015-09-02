@@ -206,7 +206,7 @@ class Specification(object):
             hcount -= (self._columns - 1)
         if self._right_margin is not None:
             hspace -= self._right_margin
-            if hspace < 0 and hspace > -0.001:
+            if hspace < 0.01 and hspace > -0.01:
                 self._right_margin += hspace
                 hspace = 0
             if hspace < 0:
@@ -227,18 +227,18 @@ class Specification(object):
             vcount -= (self._rows - 1)
         if self._bottom_margin is not None:
             vspace -= self._bottom_margin
-            if vspace < 0 and vspace > -0.001:
-                self._bottom_margin += hspace
-                hspace = 0
+            if vspace < 0.01 and vspace > -0.01:
+                self._bottom_margin += vspace
+                vspace = 0
             if vspace < 0:
                 raise InvalidDimension("Bottom margin is too tall for the labels to fit on the sheet.")
             vcount -= 1
 
         # If all the margins are specified, they must use up all available space.
         if hcount == 0 and hspace != 0:
-            raise InvalidDimension("Not all width used by manually specified margins/gaps; {}mm left.".format(vspace))
+            raise InvalidDimension("Not all width used by manually specified margins/gaps; {}mm left.".format(hspace))
         if vcount == 0 and vspace != 0:
-            raise InvalidDimension("Not all height used by manually specified margins/gaps; {}mm left.".format(hspace))
+            raise InvalidDimension("Not all height used by manually specified margins/gaps; {}mm left.".format(vspace))
 
         # Split any extra horizontal space and allocate it.
         if hcount:
