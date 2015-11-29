@@ -6,12 +6,12 @@ with open('pypi.rst') as f:
     long_description = f.read()
 
 setup(name='pylabels',
-      version='1.2.0',
+      version='1.2.1',
       description='Library to generate PDFs for printing labels',
       long_description=long_description,
       author='Blair Bonnett',
       author_email='blair.bonnett@gmail.com',
-      url='https://github.com/blairbonnett/pylabels/',
+      url='https://github.com/bcbnz/pylabels/',
       packages=['labels',],
       requires=['reportlab'],
       provides=['pylabels'],
